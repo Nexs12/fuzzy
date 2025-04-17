@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Fuzzy Matching Імен</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      width: 90%;
+      max-width: 700px;
+    }
+    textarea {
+      width: 90%;
+      height: 100px;
+      margin: 0.5rem 0;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      border: 1px solid #ccc;
+      resize: none;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .result {
+      margin-top: 2rem;
+      text-align: left;
+    }
+    .match-item {
+      padding: 0.3rem 0.5rem;
+      margin: 0.2rem 0;
+      border-radius: 0.3rem;
+    }
+    .low { background-color: #f8d7da; }
+    .medium { background-color: #fff3cd; }
+    .high { background-color: #d4edda; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Fuzzy Matching: Порівняння масивів імен</h2>
+    <p>Введіть імена у двох списках (по одному імені на рядок):</p>
+    <textarea id="list1" placeholder="Перший список імен"></textarea>
+    <textarea id="list2" placeholder="Другий список імен"></textarea>
+    <br />
+    <button onclick="compareLists()">Порівняти</button>
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    function levenshtein(a, b) {
+      const matrix = [];
+      const lenA = a.length;
+      const lenB = b.length;
+
+      for (let i = 0; i <= lenB; i++) matrix[i] = [i];
+      for (let j = 0; j <= lenA; j++) matrix[0][j] = j;
+
+      for (let i = 1; i <= lenB; i++) {
+        for (let j = 1; j <= lenA; j++) {
+          if (b.charAt(i - 1) === a.charAt(j - 1)) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j] + 1,
+              matrix[i][j - 1] + 1,
+              matrix[i - 1][j - 1] + 1
+            );
+          }
+        }
+      }
+
+      return matrix[lenB][lenA];
+    }
+
+    function similarity(a, b) {
+      const distance = levenshtein(a.toLowerCase(), b.toLowerCase());
+      const maxLen = Math.max(a.length, b.length);
+      return ((1 - distance / maxLen) * 100).toFixed(2);
+    }
+
+    function getClass(score) {
+      if (score >= 80) return "match-item high";
+      if (score >= 50) return "match-item medium";
+      return "match-item low";
+    }
+
+    function compareLists() {
+      const list1 = document.getElementById("list1").value.trim().split("\n");
+      const list2 = document.getElementById("list2").value.trim().split("\n");
+      const resultContainer = document.getElementById("result");
+      let results = [];
+
+      list1.forEach(name1 => {
+        list2.forEach(name2 => {
+          const score = similarity(name1, name2);
+          results.push({ name1, name2, score: parseFloat(score) });
+        });
+      });
+
+      results.sort((a, b) => a.score - b.score);
+
+      resultContainer.innerHTML = "<h3>Результати порівняння:</h3>";
+      results.forEach(r => {
+        resultContainer.innerHTML += `<div class="${getClass(r.score)}">${r.name1} ↔ ${r.name2} — <strong>${r.score}%</strong></div>`;
+      });
+    }
+  </script>
+</body>
+</html>
