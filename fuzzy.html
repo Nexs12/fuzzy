@@ -38,6 +38,7 @@
       border-radius: 0.5rem;
       cursor: pointer;
       margin-top: 1rem;
+      margin-right: 0.5rem;
     }
     button:hover {
       background: #0056b3;
@@ -53,7 +54,7 @@
     }
     .low { background-color: #f8d7da; }
     .medium { background-color: #fff3cd; }
-    .high { background-color: #d4edda; }
+    .high { background-color: #d4edda; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -64,10 +65,13 @@
     <textarea id="list2" placeholder="Другий список імен"></textarea>
     <br />
     <button onclick="compareLists()">Порівняти</button>
+    <button onclick="exportToCSV()">Експортувати CSV</button>
     <div class="result" id="result"></div>
   </div>
 
   <script>
+    let results = [];
+
     function levenshtein(a, b) {
       const matrix = [];
       const lenA = a.length;
@@ -93,9 +97,20 @@
       return matrix[lenB][lenA];
     }
 
+    function normalizeName(name) {
+      return name
+        .trim()
+        .toLowerCase()
+        .split(/\s+/)
+        .sort()
+        .join(" ");
+    }
+
     function similarity(a, b) {
-      const distance = levenshtein(a.toLowerCase(), b.toLowerCase());
-      const maxLen = Math.max(a.length, b.length);
+      const normA = normalizeName(a);
+      const normB = normalizeName(b);
+      const distance = levenshtein(normA, normB);
+      const maxLen = Math.max(normA.length, normB.length);
       return ((1 - distance / maxLen) * 100).toFixed(2);
     }
 
@@ -109,14 +124,16 @@
       const list1 = document.getElementById("list1").value.trim().split("\n");
       const list2 = document.getElementById("list2").value.trim().split("\n");
       const resultContainer = document.getElementById("result");
-      let results = [];
+      results = [];
 
-      list1.forEach(name1 => {
-        list2.forEach(name2 => {
-          const score = similarity(name1, name2);
-          results.push({ name1, name2, score: parseFloat(score) });
-        });
-      });
+      const maxLen = Math.max(list1.length, list2.length);
+
+      for (let i = 0; i < maxLen; i++) {
+        const name1 = list1[i] || "";
+        const name2 = list2[i] || "";
+        const score = similarity(name1, name2);
+        results.push({ name1, name2, score: parseFloat(score) });
+      }
 
       results.sort((a, b) => a.score - b.score);
 
@@ -124,6 +141,24 @@
       results.forEach(r => {
         resultContainer.innerHTML += `<div class="${getClass(r.score)}">${r.name1} ↔ ${r.name2} — <strong>${r.score}%</strong></div>`;
       });
+    }
+
+    function exportToCSV() {
+      if (results.length === 0) return;
+
+      let csv = 'Імʼя 1,Імʼя 2,Схожість (%)\n';
+      results.forEach(r => {
+        csv += `"${r.name1}","${r.name2}","${r.score}%"\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+      link.setAttribute("href", URL.createObjectURL(blob));
+      link.setAttribute("download", "result.csv");
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   </script>
 </body>
